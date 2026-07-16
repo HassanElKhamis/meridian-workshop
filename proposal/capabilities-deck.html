@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Dashboard Modernization — Meridian Components</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 60px 80px;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  }
+
+  .slide.active { display: flex; }
+
+  .slide h1 {
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+    color: #f8fafc;
+  }
+
+  .slide h2 {
+    font-size: 2.4rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    color: #f8fafc;
+  }
+
+  .slide h3 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+    color: #f8fafc;
+  }
+
+  .slide p, .slide li {
+    font-size: 1.2rem;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+
+  .subtitle {
+    font-size: 1.5rem;
+    color: #64748b;
+    font-weight: 300;
+    margin-bottom: 0.3rem;
+  }
+
+  .tagline {
+    font-size: 1.1rem;
+    color: #475569;
+    font-weight: 300;
+  }
+
+  .accent {
+    color: #38bdf8;
+  }
+
+  .green { color: #4ade80; }
+
+  /* Title slide */
+  #slide-0 {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  #slide-0 .company {
+    font-size: 1rem;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Content layouts */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 28px;
+  }
+
+  .card h3 { margin-bottom: 0.8rem; }
+
+  .card p {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .card ul li {
+    padding: 6px 0;
+    font-size: 1rem;
+    color: #94a3b8;
+    border-bottom: 1px solid #334155;
+  }
+
+  .card ul li:last-child { border-bottom: none; }
+
+  .card ul li::before {
+    content: "→ ";
+    color: #38bdf8;
+  }
+
+  /* Timeline */
+  .timeline {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    margin-top: 30px;
+  }
+
+  .timeline-phase {
+    flex: 1;
+    padding: 24px;
+    border-radius: 12px;
+    margin-right: 8px;
+  }
+
+  .timeline-phase:last-child { margin-right: 0; }
+
+  .timeline-phase.p1 { background: linear-gradient(135deg, #1e3a5f, #1e293b); border: 1px solid #38bdf8; }
+  .timeline-phase.p2 { background: linear-gradient(135deg, #1a3a2f, #1e293b); border: 1px solid #4ade80; }
+  .timeline-phase.p3 { background: linear-gradient(135deg, #2d1b4e, #1e293b); border: 1px solid #a78bfa; }
+
+  .timeline-phase .week {
+    font-size: 0.85rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .timeline-phase h3 { font-size: 1.2rem; margin-bottom: 0.8rem; }
+
+  .timeline-phase ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .timeline-phase ul li {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    padding: 3px 0;
+  }
+
+  .timeline-phase ul li::before {
+    content: "• ";
+    color: #38bdf8;
+  }
+
+  /* Stats */
+  .stat {
+    font-size: 2.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #1e293b;
+    color: #f8fafc;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-bottom: 2px solid #334155;
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 1rem;
+    color: #94a3b8;
+    border-bottom: 1px solid #334155;
+  }
+
+  tr:hover td { background: #1e293b; }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 24px;
+    right: 40px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .nav button {
+    background: #1e293b;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+
+  .nav button:hover {
+    background: #334155;
+    color: #f8fafc;
+  }
+
+  .slide-counter {
+    color: #475569;
+    font-size: 0.9rem;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: #38bdf8;
+    transition: width 0.3s ease;
+  }
+
+  /* Divider */
+  .divider {
+    width: 60px;
+    height: 3px;
+    background: #38bdf8;
+    margin: 20px 0;
+    border-radius: 2px;
+  }
+
+  /* CTA slide */
+  .cta-box {
+    background: linear-gradient(135deg, #1e3a5f, #0f172a);
+    border: 1px solid #38bdf8;
+    border-radius: 16px;
+    padding: 48px;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .cta-box h2 { margin-bottom: 1rem; }
+  .cta-box p { max-width: 600px; margin: 0 auto; }
+
+  /* Keyboard hint */
+  .hint {
+    position: fixed;
+    bottom: 24px;
+    left: 40px;
+    color: #475569;
+    font-size: 0.8rem;
+  }
+
+  kbd {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<!-- Slide 1 — Title -->
+<div class="slide active" id="slide-0">
+  <div class="company">Meridian Components — RFP MC-2026-0417</div>
+  <h1>Inventory Dashboard<br>Modernization</h1>
+  <p class="subtitle">Capabilities Presentation</p>
+  <p class="tagline">How we will make your system work correctly — then extend it where your team needs it most.</p>
+</div>
+
+<!-- Slide 2 — The Problem -->
+<div class="slide" id="slide-1">
+  <h2>The Problem</h2>
+  <div class="divider"></div>
+  <div class="three-col">
+    <div class="card">
+      <h3><span class="accent">01</span> Broken Reports</h3>
+      <p>Your Reports module has ~8 known defects — filters that don't work, missing translations, and console errors. Your operations team cannot trust the data.</p>
+    </div>
+    <div class="card">
+      <h3><span class="accent">02</span> Missing Capabilities</h3>
+      <p>VP R. Tanaka needs a restocking recommendation engine — budget-aware purchase orders driven by stock levels and demand. This feature does not exist.</p>
+    </div>
+    <div class="card">
+      <h3><span class="accent">03</span> No Safety Net</h3>
+      <p>Zero automated test coverage. Your IT team has blocked all changes until tests exist. This is the bottleneck holding back everything else.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 3 — Our Approach -->
+<div class="slide" id="slide-2">
+  <h2>Our Approach</h2>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div>
+      <h3>Three Principles</h3>
+      <ul>
+        <li><strong>Tests first.</strong> No line of code touches production without test coverage. Your IT team gets guardrails, not promises.</li>
+        <li><strong>Phased delivery.</strong> You see working software every two weeks, not a big-bang delivery at the end.</li>
+        <li><strong>Operations-focused.</strong> Your dashboard is a daily tool for warehouse operators. Functionality and reliability before aesthetics.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What We Know</h3>
+      <ul>
+        <li>Vue 3 + FastAPI + JSON data layer — no database</li>
+        <li>Three warehouses across SF, London, Tokyo</li>
+        <li>Previous vendor left work unfinished with minimal docs</li>
+        <li>Tokyo team needs Japanese UI support</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 4 — R1: Reports -->
+<div class="slide" id="slide-3">
+  <h2>R1: Reports Remediation</h2>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div class="card">
+      <h3><span class="accent">Step 1</span> Audit</h3>
+      <p>Instrument the Reports page with diagnostic logging. Trace every filter control through the full data path: Vue → API → JSON. Surface every defect.</p>
+    </div>
+    <div class="card">
+      <h3><span class="accent">Step 2</span> Fix & Verify</h3>
+      <p>Resolve each defect in its own commit. Pair every fix with a browser test so the defect cannot regress. Deliver documented defect log.</p>
+    </div>
+  </div>
+  <p style="margin-top:24px; font-size:1rem;"><strong>Deliverable:</strong> Fully functional Reports page with test coverage for every fix.</p>
+</div>
+
+<!-- Slide 5 — R2: Restocking -->
+<div class="slide" id="slide-4">
+  <h2>R2: Restocking Recommendations</h2>
+  <div class="divider"></div>
+  <div class="two-col">
+    <div class="card">
+      <h3>Backend API</h3>
+      <ul>
+        <li>New <code>POST /api/restock</code> endpoint</li>
+        <li>Inputs: warehouse, budget ceiling</li>
+        <li>Reads inventory + demand forecast</li>
+        <li>Outputs: purchase orders ranked by stockout risk</li>
+        <li>Results capped at budget ceiling</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Frontend View</h3>
+      <ul>
+        <li>Warehouse selector + budget input</li>
+        <li>Results table: product, stock, demand, order qty, cost</li>
+        <li>"Generate Order" action per row</li>
+        <li>Summary bar: total spend vs. budget ceiling</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 6 — R3: Tests -->
+<div class="slide" id="slide-5">
+  <h2>R3: Automated Browser Testing</h2>
+  <div class="divider"></div>
+  <p><strong>Framework:</strong> Playwright — already configured in this project's <code>.mcp.json</code>.</p>
+  <table>
+    <thead>
+      <tr><th>Test Suite</th><th>What It Covers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Dashboard</strong></td><td>Load → verify summary cards → switch warehouse → verify updates</td></tr>
+      <tr><td><strong>Inventory</strong></td><td>Apply filters → verify table → verify row count</td></tr>
+      <tr><td><strong>Reports</strong></td><td>Apply each filter → verify chart → verify export</td></tr>
+      <tr><td><strong>Orders</strong></td><td>Filter by status → open details → verify data</td></tr>
+      <tr><td><strong>Restocking</strong></td><td>Select warehouse → enter budget → verify recommendations</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:20px; font-size:1rem;"><strong>Deliverable:</strong> CI-ready test suite. Run locally or in pipeline.</p>
+</div>
+
+<!-- Slide 7 — R4: Architecture -->
+<div class="slide" id="slide-6">
+  <h2>R4: Architecture Documentation</h2>
+  <div class="divider"></div>
+  <div class="three-col">
+    <div class="card">
+      <h3>System Overview</h3>
+      <p>Interactive diagram showing frontend, backend, and data layers with deployment topology.</p>
+    </div>
+    <div class="card">
+      <h3>API Reference</h3>
+      <p>Documented endpoint list with request/response schemas from FastAPI's OpenAPI spec.</p>
+    </div>
+    <div class="card">
+      <h3>Runbook</h3>
+      <p>How to start the app, run tests, and perform common operational tasks.</p>
+    </div>
+  </div>
+  <p style="margin-top:20px; font-size:1rem;"><strong>Also includes:</strong> Data flow diagrams, known limitations, and future migration recommendations.</p>
+</div>
+
+<!-- Slide 8 — Timeline -->
+<div class="slide" id="slide-7">
+  <h2>Timeline — 10 Weeks, 3 Phases</h2>
+  <div class="timeline">
+    <div class="timeline-phase p1">
+      <div class="week">Weeks 1–3</div>
+      <h3 class="accent">Stabilize</h3>
+      <ul>
+        <li>Reports audit & fix</li>
+        <li>Playwright setup</li>
+        <li>Dashboard/Inventory tests</li>
+        <li>Reports/Orders tests</li>
+        <li>Architecture draft</li>
+      </ul>
+    </div>
+    <div class="timeline-phase p2">
+      <div class="week">Weeks 4–7</div>
+      <h3 class="green">Extend</h3>
+      <ul>
+        <li>Restocking backend API</li>
+        <li>Restocking frontend view</li>
+        <li>Restocking tests</li>
+        <li>i18n Japanese locale</li>
+        <li>Polish & edge cases</li>
+      </ul>
+    </div>
+    <div class="timeline-phase p3">
+      <div class="week">Weeks 8–10</div>
+      <h3 style="color:#a78bfa;">Harden</h3>
+      <ul>
+        <li>Architecture docs final</li>
+        <li>Test gap analysis</li>
+        <li>CI/CD integration guide</li>
+        <li>Knowledge transfer</li>
+        <li>Final demo & sign-off</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 9 — Pricing -->
+<div class="slide" id="slide-8">
+  <h2>Pricing</h2>
+  <div class="divider"></div>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Fixed Fee</th><th>Not-to-Exceed</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Phase 1 — Stabilize</td><td>$28,500</td><td>$34,200</td></tr>
+      <tr><td>Phase 2 — Extend</td><td>$27,200</td><td>$32,640</td></tr>
+      <tr><td>Phase 3 — Harden</td><td>$12,800</td><td>$15,360</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>$68,500</strong></td><td><strong>$82,200</strong></td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:20px;">Fixed-fee per phase. You know the maximum investment before any phase begins. Phase 2 does not start until Phase 1 is signed off.</p>
+</div>
+
+<!-- Slide 10 — Why Us -->
+<div class="slide" id="slide-9">
+  <h2>Why Us</h2>
+  <div class="divider"></div>
+  <div class="three-col">
+    <div class="card" style="text-align:center;">
+      <div class="stat green">99.2%</div>
+      <div class="stat-label">Uptime achieved</div>
+      <p style="margin-top:8px;">For a regional distributor — up from 94% after our remediation engagement in 2024.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="stat accent">60%</div>
+      <div class="stat-label">Manual work reduced</div>
+      <p style="margin-top:8px;">Procurement planning effort cut for an electronics manufacturer — delivered within fixed-fee budget.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <div class="stat" style="color:#a78bfa;">0</div>
+      <div class="stat-label">Regressions in Q1</div>
+      <p style="margin-top:8px;">Multi-warehouse migration for a global distributor — zero regressions after delivery.</p>
+    </div>
+  </div>
+  <p style="margin-top:28px; font-size:1.1rem; color:#64748b; text-align:center;">Our strength is making existing systems work correctly. That is exactly the work you are asking for.</p>
+</div>
+
+<!-- Slide 11 — Next Steps -->
+<div class="slide" id="slide-10">
+  <h2>Next Steps</h2>
+  <div class="divider"></div>
+  <div class="cta-box">
+    <h2>Let's Build What Your Team Needs</h2>
+    <p>We request a 60-minute working session with R. Tanaka and your IT team to validate our understanding and confirm scope assumptions. Upon mutual agreement, we can begin Phase 1 within one week of contract signature.</p>
+  </div>
+  <div style="display:flex; justify-content:center; gap:40px; margin-top:40px;">
+    <div>
+      <div class="stat accent">60 min</div>
+      <div class="stat-label">Working Session</div>
+    </div>
+    <div>
+      <div class="stat green">1 week</div>
+      <div class="stat-label">To Start Phase 1</div>
+    </div>
+    <div>
+      <div class="stat" style="color:#a78bfa;">10 weeks</div>
+      <div class="stat-label">Full Delivery</div>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button onclick="prevSlide()">← Back</button>
+  <span class="slide-counter" id="counter">1 / 11</span>
+  <button onclick="nextSlide()">Next →</button>
+</div>
+
+<div class="hint">
+  <kbd>←</kbd> <kbd>→</kbd> arrow keys &nbsp;|&nbsp; <kbd>Home</kbd> first slide &nbsp;|&nbsp; <kbd>End</kbd> last slide
+</div>
+
+<script>
+  const total = document.querySelectorAll('.slide').length;
+  let current = 0;
+
+  function showSlide(n) {
+    document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+    document.getElementById('slide-' + n).classList.add('active');
+    document.getElementById('counter').textContent = (n + 1) + ' / ' + total;
+    document.getElementById('progress').style.width = ((n + 1) / total * 100) + '%';
+    current = n;
+  }
+
+  function nextSlide() { if (current < total - 1) showSlide(current + 1); }
+  function prevSlide() { if (current > 0) showSlide(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+    if (e.key === 'Home') { e.preventDefault(); showSlide(0); }
+    if (e.key === 'End') { e.preventDefault(); showSlide(total - 1); }
+  });
+
+  showSlide(0);
+</script>
+
+</body>
+</html>

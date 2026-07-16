@@ -102,5 +102,25 @@ export const api = {
   async getPurchaseOrderByBacklogItem(backlogItemId) {
     const response = await axios.get(`${API_BASE_URL}/purchase-orders/${backlogItemId}`)
     return response.data
+  },
+
+  async getQuarterlyReports() {
+    const response = await axios.get(`${API_BASE_URL}/reports/quarterly`)
+    return response.data
+  },
+
+  async getMonthlyTrends() {
+    const response = await axios.get(`${API_BASE_URL}/reports/monthly-trends`)
+    return response.data
+  },
+
+  async getRestockingRecommendations(params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.budget) queryParams.append('budget', params.budget)
+    if (params.warehouse && params.warehouse !== 'all') queryParams.append('warehouse', params.warehouse)
+    if (params.category && params.category !== 'all') queryParams.append('category', params.category)
+
+    const response = await axios.get(`${API_BASE_URL}/restocking?${queryParams.toString()}`)
+    return response.data
   }
 }

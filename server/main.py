@@ -304,6 +304,138 @@ def get_monthly_trends():
     result.sort(key=lambda x: x['month'])
     return result
 
+class RestockingRecommendation(BaseModel):
+    sku: str
+    item_name: str
+    category: str
+    warehouse: str
+    quantity_on_hand: int
+    reorder_point: int
+    forecasted_demand: int
+    restocking_gap: int
+    trend: str
+    recommended_quantity: int
+    unit_cost: float
+    estimated_cost: float
+    priority: str
+
+
+class RestockingResponse(BaseModel):
+    recommendations: list[RestockingRecommendation]
+    budget_limit: Optional[float] = None
+    total_estimated_cost: float
+    items_within_budget: int
+    total_items: int
+    budget_used_percentage: float
+
+
+@app.get("/api/restocking", response_model=RestockingResponse)
+def get_restocking_recommendations(
+    budget: Optional[float] = None,
+    warehouse: Optional[str] = None,
+    category: Optional[str] = None
+):
+    """
+    Generate restocking recommendations based on stock levels and demand forecasts.
+
+    Algorithm:
+    1. Match inventory items with demand forecasts by SKU
+    2. Calculate restocking gap: forecasted_demand - quantity_on_hand
+    3. Only recommend items where gap > 0 (i.e., stock is below forecasted demand)
+    4. Recommended quantity = gap + reorder_point (safety buffer)
+    5. Priority: critical (gap > 100), high (gap > 50), medium (gap > 20), low (gap <= 20)
+    6. If budget is provided, fit recommendations within budget (greedy by priority)
+    """
+    # Build lookup maps
+    inventory_map = {item['sku']: item for item in inventory_items}
+    demand_map = {df['item_sku']: df for df in demand_forecasts}
+
+    # Find items that need restocking
+    all_recommendations = []
+    for sku, inv in inventory_map.items():
+        demand = demand_map.get(sku)
+        if not demand:
+            continue
+
+        forecasted = demand['forecasted_demand']
+        on_hand = inv['quantity_on_hand']
+        gap = forecasted - on_hand
+
+        # Only recommend if stock is below forecasted demand
+        if gap <= 0:
+            continue
+
+        # Recommended quantity = gap + reorder_point as safety buffer
+        recommended_qty = gap + inv['reorder_point']
+        unit_cost = inv['unit_cost']
+        estimated_cost = round(recommended_qty * unit_cost, 2)
+
+        # Determine priority
+        if gap > 100:
+            priority = 'critical'
+        elif gap > 50:
+            priority = 'high'
+        elif gap > 20:
+            priority = 'medium'
+        else:
+            priority = 'low'
+
+        all_recommendations.append(RestockingRecommendation(
+            sku=sku,
+            item_name=inv['name'],
+            category=inv['category'],
+            warehouse=inv['warehouse'],
+            quantity_on_hand=on_hand,
+            reorder_point=inv['reorder_point'],
+            forecasted_demand=forecasted,
+            restocking_gap=gap,
+            trend=demand['trend'],
+            recommended_quantity=recommended_qty,
+            unit_cost=unit_cost,
+            estimated_cost=estimated_cost,
+            priority=priority
+        ))
+
+    # Apply warehouse/category filters
+    if warehouse and warehouse != 'all':
+        all_recommendations = [r for r in all_recommendations if r.warehouse == warehouse]
+    if category and category != 'all':
+        all_recommendations = [r for r in all_recommendations if r.category.lower() == category.lower()]
+
+    # Sort by priority (critical first), then by gap descending
+    priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+    all_recommendations.sort(key=lambda r: (priority_order.get(r.priority, 4), -r.restocking_gap))
+
+    total_items = len(all_recommendations)
+    total_cost = round(sum(r.estimated_cost for r in all_recommendations), 2)
+
+    # If budget is provided, fit recommendations within budget (greedy by priority)
+    recommendations = all_recommendations
+    budget_used_percentage = 100.0
+    items_within_budget = total_items
+
+    if budget is not None and budget > 0:
+        fitted = []
+        running_total = 0.0
+        for r in all_recommendations:
+            if running_total + r.estimated_cost <= budget:
+                fitted.append(r)
+                running_total += r.estimated_cost
+        recommendations = fitted
+        items_within_budget = len(recommendations)
+        total_cost = round(running_total, 2)
+        budget_used_percentage = round((running_total / budget) * 100, 1)
+
+    return RestockingResponse(
+        recommendations=recommendations,
+        budget_limit=budget,
+        total_estimated_cost=total_cost,
+        items_within_budget=items_within_budget,
+        total_items=total_items,
+        budget_used_percentage=budget_used_percentage
+    )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

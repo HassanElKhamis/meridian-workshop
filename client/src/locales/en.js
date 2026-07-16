@@ -6,6 +6,8 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    reports: 'Reports',
+    restocking: 'Restocking',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -309,6 +311,61 @@ export default {
     english: 'English',
     japanese: 'Japanese',
     selectLanguage: 'Select Language'
+  },
+
+  // Reports
+  reports: {
+    title: 'Performance Reports',
+    description: 'View quarterly performance metrics and monthly trends',
+    quarterlyPerformance: 'Quarterly Performance',
+    quarter: 'Quarter',
+    totalOrders: 'Total Orders',
+    totalRevenue: 'Total Revenue',
+    avgOrderValue: 'Avg Order Value',
+    fulfillmentRate: 'Fulfillment Rate',
+    monthlyRevenueTrend: 'Monthly Revenue Trend',
+    monthOverMonthAnalysis: 'Month-over-Month Analysis',
+    month: 'Month',
+    orders: 'Orders',
+    revenue: 'Revenue',
+    change: 'Change',
+    growthRate: 'Growth Rate',
+    totalRevenueYtd: 'Total Revenue (YTD)',
+    avgMonthlyRevenue: 'Avg Monthly Revenue',
+    totalOrdersYtd: 'Total Orders (YTD)',
+    bestQuarter: 'Best Performing Quarter'
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking Recommendations',
+    description: 'AI-driven purchase order recommendations based on stock levels, demand forecasts, and budget',
+    budget: 'Budget Ceiling',
+    budgetPlaceholder: 'Enter budget ceiling (optional)',
+    apply: 'Apply',
+    recommendations: 'Recommendations',
+    sku: 'SKU',
+    itemName: 'Item Name',
+    category: 'Category',
+    warehouse: 'Warehouse',
+    onHand: 'On Hand',
+    reorderPoint: 'Reorder Point',
+    forecastedDemand: 'Forecasted Demand',
+    gap: 'Gap',
+    trend: 'Trend',
+    recommendedQty: 'Recommended Qty',
+    unitCost: 'Unit Cost',
+    estimatedCost: 'Estimated Cost',
+    priority: 'Priority',
+    totalCost: 'Total Estimated Cost',
+    itemsCount: 'Items',
+    budgetUsed: 'Budget Used',
+    withinBudget: 'within budget',
+    noRecommendations: 'No restocking needed — all items have sufficient stock levels.',
+    critical: 'Critical',
+    high: 'High',
+    medium: 'Medium',
+    low: 'Low'
   },
 
   // Common

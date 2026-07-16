@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian Components — Current-State Architecture Review</title>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --border: #475569; --text: #e2e8f0; --text-muted: #94a3b8;
+    --accent: #3b82f6; --accent2: #8b5cf6; --green: #10b981;
+    --yellow: #f59e0b; --red: #ef4444; --orange: #f97316;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    padding: 2rem; max-width: 1200px; margin: 0 auto;
+  }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  h2 { font-size: 1.5rem; margin: 3rem 0 1rem; padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--surface2); }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: var(--accent); }
+  .subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 2rem; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+  .badge-critical { background: var(--red); color: white; }
+  .badge-warning { background: var(--yellow); color: #1a1a1a; }
+  .badge-info { background: var(--accent); color: white; }
+  .badge-ok { background: var(--green); color: white; }
+
+  /* Layer Diagram */
+  .layer-stack { display: flex; flex-direction: column; gap: 0; margin: 2rem 0; border: 2px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .layer { padding: 1.25rem 1.5rem; border-bottom: 2px dashed var(--surface2); }
+  .layer:last-child { border-bottom: none; }
+  .layer-title { font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .layer-lut { color: var(--accent); } .layer-app { color: var(--accent2); } .layer-backend { color: var(--green); } .layer-data { color: var(--orange); }
+  .layer-items { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip { background: var(--surface2); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+  .chip.highlight { border: 1px solid var(--accent); }
+  .chip.warn { border: 1px solid var(--yellow); }
+
+  /* Flow Diagrams */
+  .flow { display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; font-size: 0.9rem; }
+  .flow-box { padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; text-align: center; min-width: 120px; }
+  .flow-fe { background: var(--accent2); color: white; }
+  .flow-be { background: var(--green); color: white; }
+  .flow-db { background: var(--orange); color: white; }
+  .flow-arrow { color: var(--text-muted); font-size: 1.2rem; }
+  .flow-label { color: var(--text-muted); font-size: 0.8rem; font-style: italic; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th { background: var(--surface); padding: 0.75rem; text-align: left; font-weight: 600; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+  td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--surface2); }
+  tr:hover { background: var(--surface); }
+  code { background: var(--surface2); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; font-family: 'Fira Code', 'Consolas', monospace; }
+  .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1rem 0; }
+  @media(max-width:800px) { .section-grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+  .card h4 { margin-bottom: 0.5rem; color: var(--accent2); }
+  .card p, .card ul { font-size: 0.9rem; color: var(--text-muted); }
+  .card ul { padding-left: 1.25rem; }
+  .card li { margin: 0.25rem 0; }
+  .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--surface2);
+    color: var(--text-muted); font-size: 0.85rem; text-align: center; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .metric { background: var(--surface); border-radius: 10px; padding: 1.25rem; text-align: center; border: 1px solid var(--border); }
+  .metric-value { font-size: 2rem; font-weight: 700; }
+  .metric-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+</style>
+</head>
+<body>
+
+<h1>Meridian Components Inventory Dashboard</h1>
+<p class="subtitle">Current-State Architecture Review — RFP MC-2026-0417, Requirement R4</p>
+
+<!-- Key Metrics -->
+<div class="metric-grid">
+  <div class="metric">
+    <div class="metric-value" style="color: var(--accent2);">7</div>
+    <div class="metric-label">Vue Components</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--green);">6</div>
+    <div class="metric-label">Frontend Routes</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--green);">~15</div>
+    <div class="metric-label">API Endpoints</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--orange);">7</div>
+    <div class="metric-label">JSON Data Files</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--red);">2</div>
+    <div class="metric-label">Critical Gaps Found</div>
+  </div>
+</div>
+
+<!-- ===== SYSTEM OVERVIEW ===== -->
+<h2>1. System Overview</h2>
+<p>The Meridian Inventory Dashboard is a single-page application for monitoring component inventory, orders, demand forecasts, and spending across multiple warehouses. The application runs locally without a database — all data is stored in JSON files and loaded into memory at server startup.</p>
+
+<h3>Technology Stack</h3>
+<div class="layer-stack">
+  <div class="layer">
+    <div class="layer-title layer-lut">Browser (Client)</div>
+    <div class="layer-items">
+      <span class="chip">Vue 3</span>
+      <span class="chip">Vite (dev, :3000)</span>
+      <span class="chip">Vue Router</span>
+      <span class="chip">Axios</span>
+      <span class="chip">Vue I18n (partial)</span>
+    </div>
+  </div>
+  <div class="layer">
+    <div class="layer-title layer-backend">Application Server</div>
+    <div class="layer-items">
+      <span class="chip">Python FastAPI</span>
+      <span class="chip">Pydantic v2</span>
+      <span class="chip">uvicorn (:8001)</span>
+      <span class="chip">CORS (open)</span>
+      <span class="chip warn">No Auth</span>
+    </div>
+  </div>
+  <div class="layer">
+    <div class="layer-title layer-data">Data Layer</div>
+    <div class="layer-items">
+      <span class="chip">JSON Files</span>
+      <span class="chip">server/data/*.json</span>
+      <span class="chip highlight">In-memory (no DB)</span>
+      <span class="chip">7 data files</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== KEY METRICS ===== -->
+<h2>2. Frontend Architecture</h2>
+
+<h3>2.1 Application Structure</h3>
+<div class="section-grid">
+  <div class="card">
+    <h4>Entry Points</h4>
+    <ul>
+      <li><code>main.js</code> — Vue app init, router, i18n plugin</li>
+      <li><code>App.vue</code> — Root component with nav tabs, global state</li>
+      <li><code>api.js</code> — Axios client, base <code>localhost:8001/api</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>API Style</h4>
+    <ul>
+      <li><code>App.vue</code> uses <strong>Options API</strong> (legacy)</li>
+      <li><code>Dashboard.vue</code> uses <strong>Composition API</strong> via <code>setup()</code></li>
+      <li>Views use composables for filters and i18n</li>
+      <li><span class="badge badge-warning">Inconsistent</span> — migration incomplete</li>
+    </ul>
+  </div>
+</div>
+
+<h3>2.2 Routes</h3>
+<table>
+  <thead>
+    <tr><th>Path</th><th>Component</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>/</code></td><td>Dashboard.vue</td><td><span class="badge badge-ok">Active</span></td></tr>
+    <tr><td><code>/inventory</code></td><td>Inventory.vue</td><td><span class="badge badge-ok">Active</span></td></tr>
+    <tr><td><code>/orders</code></td><td>Orders.vue</td><td><span class="badge badge-ok">Active</span></td></tr>
+    <tr><td><code>/spending</code></td><td>Spending.vue</td><td><span class="badge badge-ok">Active</span></td></tr>
+    <tr><td><code>/demand</code></td><td>Demand.vue</td><td><span class="badge badge-ok">Active</span></td></tr>
+    <tr><td><code>/reports</code></td><td>Reports.vue</td><td><span class="badge badge-warning">Defects (R1)</span></td></tr>
+    <tr><td><code>/restocking</code></td><td><em>Not implemented</em></td><td><span class="badge badge-critical">Missing (R2)</span></td></tr>
+  </tbody>
+</table>
+
+<h3>2.3 Shared Components</h3>
+<table>
+  <thead>
+    <tr><th>Component</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>FilterBar.vue</td><td>Global filter bar (period, warehouse, category, status)</td></tr>
+    <tr><td>LanguageSwitcher.vue</td><td>EN / JA language toggle</td></tr>
+    <tr><td>ProfileMenu.vue</td><td>User profile dropdown</td></tr>
+    <tr><td>TasksModal.vue</td><td>Todo/task management modal</td></tr>
+    <tr><td>ProductDetailModal.vue</td><td>Product detail popup (Dashboard)</td></tr>
+    <tr><td>BacklogDetailModal.vue</td><td>Backlog item detail popup (Dashboard)</td></tr>
+    <tr><td>InventoryDetailModal.vue</td><td>Inventory item detail popup</td></tr>
+    <tr><td>CostDetailModal.vue</td><td>Cost breakdown popup</td></tr>
+  </tbody>
+</table>
+
+<h3>2.4 Composables</h3>
+<table>
+  <thead>
+    <tr><th>Composable</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>useFilters.js</code></td><td>Shared filter state (period, location, category, status)</td></tr>
+    <tr><td><code>useI18n.js</code></td><td>Internationalization (en/ja locales, currency formatting)</td></tr>
+    <tr><td><code>useAuth.js</code></td><td>Auth state (placeholder — no auth implemented)</td></tr>
+  </tbody>
+</table>
+
+<h3>2.5 i18n Coverage</h3>
+<div class="section-grid">
+  <div class="card">
+    <h4>English (en.js)</h4>
+    <p>Complete translation keys for dashboard, inventory, orders, spending, demand, reports, categories, status labels, and common UI strings.</p>
+  </div>
+  <div class="card">
+    <h4>Japanese (ja.js)</h4>
+    <p>Partial coverage. Many dashboard and inventory keys translated. Reports page labels are <strong>not</strong> translated. Some views fall back to English strings. <span class="badge badge-warning">D3 — Needs Extension</span></p>
+  </div>
+</div>
+
+<!-- ===== BACKEND ARCHITECTURE ===== -->
+<h2>3. Backend Architecture</h2>
+
+<h3>3.1 FastAPI Application</h3>
+<p>Single-file application (<code>server/main.py</code>, ~310 lines) with Pydantic response models. Data loaded at startup via <code>server/mock_data.py</code> into in-memory lists.</p>
+
+<div class="card" style="margin: 1rem 0;">
+  <h4>Helper Functions</h4>
+  <ul>
+    <li><code>apply_filters(items)</code> — Filters lists by warehouse, category, and status query params</li>
+    <li><code>filter_by_month(data, month)</code> — Time-based filtering with quarter support ("q1"–"q4")</li>
+  </ul>
+</div>
+
+<h3>3.2 API Endpoints</h3>
+<table>
+  <thead>
+    <tr><th>Method</th><th>Path</th><th>Description</th><th>Used By</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GET</td><td><code>/api/inventory</code></td><td>Inventory items with optional filters</td><td>Inventory, Dashboard</td></tr>
+    <tr><td>GET</td><td><code>/api/orders</code></td><td>Orders with optional filters</td><td>Orders, Dashboard</td></tr>
+    <tr><td>GET</td><td><code>/api/dashboard/summary</code></td><td>Aggregated KPI summary</td><td>Dashboard</td></tr>
+    <tr><td>GET</td><td><code>/api/demand</code></td><td>Demand forecasts with filters</td><td>Demand</td></tr>
+    <tr><td>GET</td><td><code>/api/backlog</code></td><td>Backlog/shortage items</td><td>Dashboard</td></tr>
+    <tr><td>GET</td><td><code>/api/spending</code></td><td>Spending data</td><td>Spending</td></tr>
+    <tr><td>GET</td><td><code>/api/spending/over-time</code></td><td>Spending over time series</td><td>Spending</td></tr>
+    <tr><td>GET</td><td><code>/api/spending/by-category</code></td><td>Spending aggregated by category</td><td>Spending</td></tr>
+    <tr><td>GET</td><td><code>/api/spending/top-suppliers</code></td><td>Top suppliers by spend</td><td>Spending</td></tr>
+    <tr><td>GET</td><td><code>/api/reports/quarterly</code></td><td>Quarterly performance report</td><td>Reports</td></tr>
+    <tr><td>GET</td><td><code>/api/reports/monthly-trends</code></td><td>Monthly trend data</td><td>Reports</td></tr>
+    <tr><td>POST</td><td><code>/api/tasks</code></td><td>Create task (todo)</td><td>App.vue</td></tr>
+    <tr><td>GET</td><td><code>/api/tasks</code></td><td>List tasks</td><td>App.vue</td></tr>
+    <tr><td>DELETE</td><td><code>/api/tasks/:id</code></td><td>Delete task</td><td>App.vue</td></tr>
+    <tr><td>PATCH</td><td><code>/api/tasks/:id/toggle</code></td><td>Toggle task completion</td><td>App.vue</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 Pydantic Models</h3>
+<table>
+  <thead>
+    <tr><th>Model</th><th>Purpose</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>InventoryItem</td><td>SKU, name, category, warehouse, quantity_on_hand, reorder_point, unit_cost</td></tr>
+    <tr><td>Order</td><td>Order ID, items, status, dates, total_value</td></tr>
+    <tr><td>DemandForecast</td><td>SKU, forecasted demand, confidence interval</td></tr>
+    <tr><td>BacklogItem</td><td>Order ID, SKU, quantities needed/available, days delayed, priority</td></tr>
+    <tr><td>PurchaseOrder</td><td>PO ID, supplier, items, status, total</td></tr>
+    <tr><td>CreatePurchaseOrderRequest</td><td>Request body for creating POs</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== DATA FLOW ===== -->
+<h2>4. Data Flow Diagrams</h2>
+
+<h3>4.1 Dashboard Load (Critical Path)</h3>
+<div class="flow">
+  <div class="flow-box flow-fe">User Opens /</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-fe">Dashboard.vue setup()</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-fe">Promise.all(4 API calls)</div>
+</div>
+<div class="flow">
+  <span class="flow-label">4 parallel requests to backend:</span>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /dashboard/summary</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">orders.json</div>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /orders</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">orders.json</div>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /inventory</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">inventory.json</div>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /backlog</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">backlog_items.json</div>
+</div>
+
+<h3>4.2 Reports Page Load</h3>
+<div class="flow">
+  <div class="flow-box flow-fe">User Opens /reports</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-fe">Reports.vue mounted()</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-fe">axios.get() — direct, NOT via api.js</div>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /reports/quarterly</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">orders.json → aggregate</div>
+</div>
+<div class="flow">
+  <div class="flow-box flow-be">GET /reports/monthly-trends</div>
+  <span class="flow-arrow">→</span>
+  <div class="flow-box flow-db">orders.json → monthly agg</div>
+</div>
+<p style="color: var(--yellow); margin-top: 0.5rem;"><strong>⚠ Finding:</strong> Reports.vue calls axios directly with hardcoded URLs instead of using the shared api.js client. No <code>getQuarterlyReports()</code> or <code>getMonthlyTrends()</code> methods exist in api.js — this is an inconsistency with the established pattern.</p>
+
+<!-- ===== DATA LAYER ===== -->
+<h2>5. Data Layer</h2>
+<p>All data is stored as static JSON files in <code>server/data/</code>. Files are loaded once at module import time via <code>mock_data.py</code>. There is no database, no persistence layer, and no write-back mechanism (POST endpoints exist for tasks and POs but are in-memory only).</p>
+
+<table>
+  <thead>
+    <tr><th>File</th><th>Records</th><th>Used By</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>inventory.json</code></td><td>SKUs, quantities, costs across warehouses</td><td>Inventory, Dashboard</td></tr>
+    <tr><td><code>orders.json</code></td><td>Order history with line items</td><td>Orders, Dashboard, Reports</td></tr>
+    <tr><td><code>demand_forecasts.json</code></td><td>SKU-level demand predictions</td><td>Demand</td></tr>
+    <tr><td><code>backlog_items.json</code></td><td>Shortage/backlog items</td><td>Dashboard</td></tr>
+    <tr><td><code>spending.json</code></td><td>Spending records by supplier</td><td>Spending</td></tr>
+    <tr><td><code>transactions.json</code></td><td>Individual transactions</td><td>Spending (detail)</td></tr>
+    <tr><td><code>purchase_orders.json</code></td><td>Purchase order records</td><td>Dashboard (PO buttons)</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== FINDINGS ===== -->
+<h2>6. Findings and Known Limitations</h2>
+
+<div class="section-grid">
+  <div class="card" style="border-left: 3px solid var(--red);">
+    <h4>🔴 Reports API Client Gap <span class="badge badge-critical">Critical</span></h4>
+    <p><code>Reports.vue</code> imports axios directly and hardcodes <code>http://localhost:8001/api/reports/...</code> URLs. Other views use the shared <code>api.js</code> client. The Reports endpoints are missing from api.js entirely. This breaks the abstraction and would make environment configuration (staging/production) unreliable for the Reports page.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--red);">
+    <h4>🔴 Restocking Feature Missing <span class="badge badge-critical">R2</span></h4>
+    <p>No <code>/restocking</code> route exists. No backend endpoint for restocking recommendations. The RFP requires a new view that recommends purchase orders given stock levels, demand forecasts, and a budget ceiling. This is a greenfield build.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--yellow);">
+    <h4>🟡 Console Log Noise <span class="badge badge-warning">R1</span></h4>
+    <p><code>Reports.vue</code> has ~15 console.log statements scattered through loadData(), formatNumber(), formatMonth(), and getBarHeight(). These are debug artifacts left by the previous vendor and pollute the browser console in production.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--yellow);">
+    <h4>🟡 Incomplete i18n <span class="badge badge-warning">D3</span></h4>
+    <p>Reports page labels ("Quarterly Performance", "Monthly Revenue Trend", "Month-over-Month Analysis") are hardcoded English strings with no translation keys. The "Reports" nav tab in App.vue also uses a hardcoded string. Japanese locale file has gaps.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--yellow);">
+    <h4>🟡 Mixed API Styles <span class="badge badge-warning">Technical Debt</span></h4>
+    <p><code>App.vue</code> uses Options API (data(), methods, mounted) while <code>Dashboard.vue</code> and other views use Composition API with <code>setup()</code>. The handoff doc notes a Composition API migration was started but never completed. This creates an inconsistent codebase and hinders refactoring.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--yellow);">
+    <h4>🟡 Orphaned Component <span class="badge badge-info">Observation</span></h4>
+    <p><code>Backlog.vue</code> exists in <code>src/views/</code> but is NOT registered in the router. It is unreachable from the application navigation. The Dashboard page renders backlog data inline, so Backlog.vue may be a remnant of an abandoned separate page.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--yellow);">
+    <h4>🟡 Tasks API Mismatch <span class="badge badge-warning">Observation</span></h4>
+    <p>The frontend calls <code>/api/tasks</code> endpoints (GET, POST, DELETE, PATCH) but these are not documented in the vendor handoff. The backend serves them but they operate on in-memory data only — tasks are lost on server restart.</p>
+  </div>
+  <div class="card" style="border-left: 3px solid var(--green);">
+    <h4>🟢 No Browser Tests <span class="badge badge-critical">R3</span></h4>
+    <p>The application has zero automated browser tests. The RFP requires Playwright-based test coverage for critical flows. A Playwright MCP server is configured in the repo and ready to use. This is a greenfield effort.</p>
+  </div>
+</div>
+
+<!-- ===== FILE MAP ===== -->
+<h2>7. Repository Structure</h2>
+<div class="section-grid">
+  <div class="card">
+    <h4>Frontend (client/)</h4>
+    <pre style="font-size:0.8rem; color: var(--text-muted); overflow-x: auto;">
+client/
+├── src/
+│   ├── main.js              ← Router, app init
+│   ├── App.vue              ← Root, nav, tasks (Options API)
+│   ├── api.js               ← Axios client (107 lines)
+│   ├── components/          ← 8 shared components
+│   ├── composables/         ← useFilters, useI18n, useAuth
+│   ├── locales/             ← en.js, ja.js
+│   ├── utils/               ← currency.js
+│   └── views/               ← 7 view components
+└── package.json             ← Vue 3, Vite, axios deps
+    </pre>
+  </div>
+  <div class="card">
+    <h4>Backend (server/)</h4>
+    <pre style="font-size:0.8rem; color: var(--text-muted); overflow-x: auto;">
+server/
+├── main.py                  ← FastAPI app (~310 lines)
+├── mock_data.py             ← JSON loader (40 lines)
+├── data/                    ← 7 JSON data files
+│   ├── inventory.json
+│   ├── orders.json
+│   ├── demand_forecasts.json
+│   ├── backlog_items.json
+│   ├── spending.json
+│   ├── transactions.json
+│   └── purchase_orders.json
+└── requirements.txt         ← Python deps
+    </pre>
+  </div>
+</div>
+
+<div class="footer">
+  <p>Generated for RFP MC-2026-0417 — Requirement R4: Architecture Documentation</p>
+  <p>Meridian Components Inventory Dashboard · Current-State Assessment</p>
+</div>
+
+</body>
+</html>

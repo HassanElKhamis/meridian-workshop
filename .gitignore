@@ -52,3 +52,6 @@ logs/
 
 # Environment variables
 .env
+
+# Personal notes & translations (participant files)
+übersetzung.txt
